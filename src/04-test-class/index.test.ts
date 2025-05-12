@@ -66,50 +66,30 @@ describe('BankAccount', () => {
 
   test('should set new balance if fetchBalance returned number', async () => {
     const account = getBankAccount(100);
+
     for (let i = 0; i < 20; i++) {
-      const tempValue = await account.fetchBalance();
+      const testValue = await account.fetchBalance();
 
-      if (tempValue !== null) {
-        const originalGetBalance = account.getBalance();
+      if (testValue !== null) {
+        account.fetchBalance = async () => testValue;
+
         await account.synchronizeBalance();
-        const newBalance = account.getBalance();
 
-        if (newBalance !== originalGetBalance) {
-          expect(typeof newBalance).toBe('number');
-          expect(newBalance).not.toBe(100);
-        } else {
-          continue;
-        }
-
+        expect(account.getBalance()).toBe(testValue);
         return;
       }
     }
 
-    throw new Error('Failed to test');
+    throw new Error('fetchBalance returned null 20 times, try test again');
   });
 
   test('should throw SynchronizationFailedError if fetchBalance returned null', async () => {
     const account = getBankAccount(100);
 
-    for (let i = 0; i < 20; i++) {
-      const testBalance = await account.fetchBalance();
+    account.fetchBalance = async () => null;
 
-      if (testBalance === null) {
-        try {
-          await account.synchronizeBalance();
-          throw new Error(
-            'Expected SynchronizationFailedError, but no error was thrown',
-          );
-        } catch (error) {
-          if (error instanceof SynchronizationFailedError) {
-            return;
-          }
-
-          throw error;
-        }
-      }
-    }
-
-    throw new Error('Failed to test');
+    await expect(account.synchronizeBalance()).rejects.toThrow(
+      SynchronizationFailedError,
+    );
   });
 });
